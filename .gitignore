@@ -1,0 +1,4 @@
+_templates/generator
+/node_modules
+dist
+*.log
