@@ -1,4 +1,4 @@
-_templates/generator
-/node_modules
-dist
+node_modules
 *.log
+_templates/
+dist/

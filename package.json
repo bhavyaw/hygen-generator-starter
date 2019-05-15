@@ -1,0 +1,13 @@
+{
+  "name": "hygen-generator-starter",
+  "version": "1.0.0",
+  "description": "Starter for hygen based projects",
+  "main": "index.js",
+  "repository": "https://github.com/bhavyaw/hygen-generator-starter.git",
+  "author": "Bhavya Wadhwa <bhavya.wadhwa@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "hygen": "^4.0.2",
+    "hygen-add": "^1.0.5"
+  }
+}
