@@ -1,0 +1,38 @@
+{
+    "manifest_version": 2,
+    "name": "suave-chrome-extension-starter",
+    "description": "Simple and highly Optimized Chrome Extension Starter with all the required configuration and settings",
+    "version": "0.1.0",
+    "browser_action": {
+        "default_icon": "./assets/icon16.png",
+        "default_popup": "popup.html"
+    },
+    "icons": {
+        "16": "./assets/icon16.png",
+        "48": "./assets/icon48.png",
+        "128": "./assets/icon128.png"
+    },
+    "content_security_policy": "script-src 'self'; object-src 'self'",
+    "options_page": "options.html",
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*/*"
+            ],
+            "js": [
+                "./js/contentScript1.js"
+            ]
+        }
+    ],
+    "background": {
+        "page": "background.html",
+        "persistent": false
+    },
+    "permissions": [
+        "tabs",
+        "storage",
+        "unlimitedStorage",
+        "<all_urls>",
+        "notifications"
+    ]
+}
