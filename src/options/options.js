@@ -2,9 +2,9 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import OptionsContainer from './OptionsContainer/OptionsContainer';
-import { EXTENSION_MODULES } from '../common/crxMessenger';
+import { EXTENSION_MODULES, publish } from '../common/crxMessenger';
 
-console.log('inside options script!', EXTENSION_MODULES.POPUP);
+console.log('inside options script!', EXTENSION_MODULES);
 startPopUpScript();
 
 function startPopUpScript() {
@@ -14,6 +14,11 @@ function startPopUpScript() {
 
 function initialize() {
   renderPopupComponent();
+  setTimeout(() => {
+    publish('GOOGLE_OPEN', { code: 'xyz' }, data => {
+      console.log(`Inside response from subscriber : `, data);
+    });
+  }, 5000);
 }
 
 function renderPopupComponent() {

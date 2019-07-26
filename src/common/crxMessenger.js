@@ -6,6 +6,7 @@ import isFunction from 'lodash/isFunction';
 import isArray from 'lodash/isArray';
 import get from 'lodash/get';
 import uniq from 'lodash/uniq';
+import { isUndefined } from 'util';
 
 export const EXTENSION_MODULES = {
   BACKGROUND: 'BACKGROUND',
@@ -38,8 +39,16 @@ function initialize() {
 
 // add check for content script and background - to use custom function to send and receive messages
 export function subscribe() {
-  const { senderModule, message, callback } = extractSubscribeMessageArguments(
-    arguments
+  const {
+    senderModule,
+    message,
+    responseCallback,
+  } = extractSubscribeMessageArguments(arguments);
+  console.log(
+    `crxMessenger.js : subscribe() : extracted arguments: `,
+    senderModule,
+    message,
+    responseCallback
   );
   const validArguments = validateArguments(senderModule, message);
 
@@ -50,15 +59,15 @@ export function subscribe() {
     }
     const messageListeners = messageSubscriptionMap.get(message);
     const newMessageListeners = messageListeners
-      ? [callback]
-      : [...messageListeners, callback];
+      ? [...messageListeners, responseCallback]
+      : [responseCallback];
     messageSubscriptionMap.set(message, newMessageListeners);
 
     if (senderModule) {
       const messageSendersList = messageSenderLinkMap.get(message);
       const newMessageSendersList = messageSendersList
-        ? [senderModule]
-        : uniq([...messageSendersList, senderModule]);
+        ? uniq([...messageSendersList, senderModule])
+        : [senderModule];
       messageSenderLinkMap.set(message, newMessageSendersList);
     }
   }
@@ -70,7 +79,7 @@ function onMessageHandler(messageObj, senderObj, sendResponseCallback) {
       onMessageHandler(singleMessageObj, senderObj, sendResponseCallback)
     );
 
-    return;
+    return true;
   }
 
   const { receiver, data, sender, message } = messageObj;
@@ -104,6 +113,7 @@ function dispatchMessagesToReceivers(message, data, sendResponseCallback) {
 function unsubscribe(message, callback) {}
 
 export function publish() {
+  console.log(`crxMesseneger.js - publish() :`, arguments);
   const {
     receiverModule,
     message,
@@ -111,6 +121,12 @@ export function publish() {
     responseCallback,
   } = extractSendMessageArgs(arguments);
   let senderModule = null;
+  console.log(
+    `crxMesseneger.js - publish() : Extracted Args : `,
+    receiverModule,
+    message,
+    data
+  );
   const validArguments = validateArguments(receiverModule, message, data);
   const messageObj = {};
 
@@ -163,7 +179,7 @@ export function sendMessageFromBackgroundToActiveTab(
   messageObj,
   responseCallback
 ) {
-  if (isEmpty(preferableTabId) || isNaN(preferableTabId)) {
+  if (isUndefined(preferableTabId) || isNaN(preferableTabId)) {
     throw new Error(
       'Argument preferrableTabId cannot be empty or not a number'
     );
@@ -195,7 +211,11 @@ export function sendMessageFromBackgroundToActiveTab(
 export function validateArguments(receiverOrSenderModule, message, data) {
   let areArgumentsValid = true;
 
-  if (receiverOrSenderModule && !EXTENSION_MODULES[receiverOrSenderModule]) {
+  if (
+    receiverOrSenderModule &&
+    !EXTENSION_MODULES[receiverOrSenderModule] &&
+    !isNumber(receiverOrSenderModule)
+  ) {
     areArgumentsValid = false;
     throw new Error(
       `Please enter a valid Receiver/Sender Module : ${receiverOrSenderModule}. Valid Extension Modules : `,
@@ -219,7 +239,7 @@ function extractSendMessageArgs(args) {
 
   /* eslint-disable prefer-destructuring */
 
-  if (isString(args[0]) && isString(args[1])) {
+  if ((isString(args[0]) || isNumber(args[0])) && isString(args[1])) {
     receiverModule = args[0];
     message = args[1];
 

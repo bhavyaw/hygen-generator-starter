@@ -2,8 +2,7 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { showDesktopNotification } from 'common/utils';
 import PopupContainer from './PopupContainer/PopupContainer';
-import { APP_CONSTANTS } from '../appConstants';
-import { EXTENSION_MODULES } from '../common/crxMessenger';
+import { EXTENSION_MODULES, subscribe } from '../common/crxMessenger';
 
 console.log('inside popup script', EXTENSION_MODULES);
 startPopUpScript();
@@ -16,6 +15,20 @@ function startPopUpScript() {
 
 function initialize() {
   renderPopupComponent();
+  subscribe('GOOGLE_OPEN', (data, sendResponseCallback) => {
+    console.log(
+      'Inside options.js subscriber for message GOOGLE_OPEN',
+      data,
+      sendResponseCallback
+    );
+    setTimeout(() => {
+      sendResponseCallback({
+        fromPopup: true,
+        pingback: true,
+        data,
+      });
+    }, 200);
+  });
 }
 
 function renderPopupComponent() {

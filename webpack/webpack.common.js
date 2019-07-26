@@ -220,7 +220,7 @@ function getOptimizationConfig() {
           minSize: 0,
           minChunks: 2,
           // @priority high
-          // TODO - Test this with async chunks i.e code splitting 
+          // TODO - Test this with async chunks i.e code splitting
           // if it doesn't work then revert to chunks : 'all'
           // TODO - Check this with bundle analyzer
           chunks: chunk => chunk.name !== 'contentScript1',

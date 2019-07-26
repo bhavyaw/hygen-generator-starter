@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import { EXTENSION_MODULES } from 'common/crxMessenger';
+import { EXTENSION_MODULES, subscribe } from 'common/crxMessenger';
 import { APP_CONSTANTS } from '../appConstants';
 import { APP_MESSAGES } from '../appMessages';
 
@@ -13,6 +13,18 @@ function startContentScript() {
 function windowOnloadHandler() {
   console.log(`contentScript1 page loaded!!`);
   extractPageDetails();
+  subscribe('GOOGLE_OPEN', (data, sendResponseCallback) => {
+    console.log(
+      'Inside options.js subscriber for message GOOGLE_OPEN',
+      data,
+      sendResponseCallback
+    );
+    sendResponseCallback({
+      fromContentScript: true,
+      pingback: true,
+      data,
+    });
+  });
 }
 
 function extractPageDetails() {

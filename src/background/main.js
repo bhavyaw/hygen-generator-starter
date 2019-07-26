@@ -1,5 +1,5 @@
 import { showDesktopNotification } from 'common/utils';
-import { sendMessage, EXTENSION_MODULES } from '../common/crxMessenger';
+import { subscribe } from '../common/crxMessenger';
 // import { APP_CONSTANTS } from '../appConstants';
 // import { APP_MESSAGES } from '../appMessages';
 
@@ -14,18 +14,29 @@ async function initializeBackgroundScript() {
   // });
   showDesktopNotification('Extension started in the background!!!');
   handleBrowserStartEvent();
-  console.log('Extension modules : ', EXTENSION_MODULES);
 }
 
 function handleBrowserStartEvent() {
   // showDesktopNotification(`Browser has started!!!`);
   listenToTabEvents();
   // extension message handler
+  // subscribe('GOOGLE_OPEN', (data, sendResponseCallback) => {
+  //   console.log(
+  //     `Inside options.js subscribe callback : `,
+  //     data,
+  //     sendResponseCallback
+  //   );
+  //   sendResponseCallback({
+  //     fromBackground: true,
+  //     pingback: true,
+  //     data,
+  //   });
+  // });
 }
 
 function listenToTabEvents() {
   const tabTestRegex1 = /myaccount\.google\.com\/(u\/\d\/|intro\/)?activitycontrols$/i;
-  const tabTestRegex2 = /myactivity.google.com\/item/i;
+  const tabTestRegex2 = /google.com/i;
 
   // eslint-disable-next-line no-undef
   chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
@@ -39,7 +50,10 @@ function listenToTabEvents() {
       }
 
       if (tabTestRegex2.test(completeUrl)) {
-        console.log(`2nd test tab opened`, tab);
+        console.log(
+          'Google.com opened - Publishing message to other extension modules',
+          tab.id
+        );
       }
     }
   });
