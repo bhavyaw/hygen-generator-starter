@@ -4,9 +4,11 @@ import isString from 'lodash/isString';
 import isNumber from 'lodash/isNumber';
 import isFunction from 'lodash/isFunction';
 import isArray from 'lodash/isArray';
+import isMatch from 'lodash/isMatch';
+import isSet from 'lodash/isSet';
 import get from 'lodash/get';
 import uniq from 'lodash/uniq';
-import { isUndefined } from 'util';
+import isUndefined from 'lodash/isUndefined';
 
 export const EXTENSION_MODULES = {
   BACKGROUND: 'BACKGROUND',
@@ -15,16 +17,16 @@ export const EXTENSION_MODULES = {
   popup: 'POPUP',
   OPTIONS: 'OPTIONS',
   options: 'OPTIONS',
-  CONTENT_SCRIPT: 'CONTENT_SCRIPT',
-  content_script: 'CONTENT_SCRIPT',
+  TAB: 'TAB',
+  tab: 'tab',
   INJECTED_SCRIPT: 'INJECTED_SCRIPT',
   injected_script: 'INJECTED_SCRIPT',
 };
 
 // To take care of the missing messages
-const messageQueue = new Set();
 const messageSubscriptionMap = new Map();
 const messageSenderLinkMap = new Map();
+const tabMessageQueueMap = new Map();
 let currentExtensionModule = null;
 let messageReceiverInitialized = false;
 
@@ -90,19 +92,29 @@ function onMessageHandler(messageObj, senderObj, sendResponseCallback) {
     (messageRestrictedSenders && messageRestrictedSenders.indexOf(sender) > -1)
   ) {
     if (!receiver || (receiver && receiver === currentExtensionModule)) {
-      dispatchMessagesToReceivers(message, data, sendResponseCallback);
+      dispatchMessagesToReceivers(
+        message,
+        data,
+        sendResponseCallback,
+        senderObj
+      );
     }
   }
 
   return true;
 }
 
-function dispatchMessagesToReceivers(message, data, sendResponseCallback) {
+function dispatchMessagesToReceivers(
+  message,
+  data,
+  sendResponseCallback,
+  senderObj
+) {
   const messageListeners = messageSubscriptionMap.get(message);
 
   if (isArray(messageListeners) && !isEmpty(messageListeners)) {
     messageListeners.forEach(messageListener => {
-      messageListener(data, sendResponseCallback);
+      messageListener(data, sendResponseCallback, senderObj);
     });
   }
 }
@@ -112,10 +124,10 @@ function dispatchMessagesToReceivers(message, data, sendResponseCallback) {
 // Return subscription id after subscribing to any message
 function unsubscribe(message, callback) {}
 
-export function publish() {
-  console.log(`crxMesseneger.js - publish() :`, arguments);
+export async function publish() {
   const {
     receiverModule,
+    receiverModuleOptions,
     message,
     data,
     responseCallback,
@@ -124,10 +136,16 @@ export function publish() {
   console.log(
     `crxMesseneger.js - publish() : Extracted Args : `,
     receiverModule,
+    receiverModuleOptions,
     message,
     data
   );
-  const validArguments = validateArguments(receiverModule, message, data);
+  const validArguments = validateArguments(
+    receiverModule,
+    message,
+    data,
+    receiverModuleOptions
+  );
   const messageObj = {};
 
   messageObj.message = message;
@@ -144,29 +162,36 @@ export function publish() {
     messageObj.sender = currentExtensionModule;
   }
 
-  if (validArguments) {
-    switch (senderModule) {
-      case EXTENSION_MODULES.BACKGROUND:
-        if (isNumber(receiverModule)) {
-          messageObj.receiver = EXTENSION_MODULES.CONTENT_SCRIPT;
-          sendMessageFromBackgroundToActiveTab(
-            receiverModule,
-            messageObj,
-            responseCallback
+  if (!validArguments) {
+    return;
+  }
+
+  switch (true) {
+    case receiverModule === EXTENSION_MODULES.TAB:
+    case receiverModule === EXTENSION_MODULES.tab:
+      if (senderModule !== EXTENSION_MODULES.TAB) {
+        // send to specific tab
+        const requiredActiveTabs = await filterTabs(receiverModuleOptions);
+        if (requiredActiveTabs) {
+          console.log(
+            `Fitlered Tabs to broadcast message to : `,
+            requiredActiveTabs
           );
-        } else {
-          chrome.runtime.sendMessage(messageObj, responseCallback); // eslint-disable-line no-undef
+          requiredActiveTabs.forEach(activeTab => {
+            messageObj.data.url = activeTab.url; // for testing purposes only
+            console.log(
+              `Message data : `,
+              JSON.stringify(messageObj, undefined, 4)
+            );
+            sendMessageToTabWithId(activeTab.id, messageObj, responseCallback);
+          });
         }
-        break;
+      }
+      break;
 
-      case EXTENSION_MODULES.CONTENT_SCRIPT:
-      case EXTENSION_MODULES.POPUP:
-      case EXTENSION_MODULES.OPTIONS:
-        chrome.runtime.sendMessage(messageObj, responseCallback); // eslint-disable-line no-undef
-        break;
-
-      default:
-    }
+    default:
+      chrome.runtime.sendMessage(messageObj, responseCallback); // eslint-disable-line no-undef
+      break;
   }
 }
 
@@ -185,37 +210,63 @@ export function sendMessageFromBackgroundToActiveTab(
     );
   }
 
-  messageQueue.add(messageObj);
+  let messageQueueForPreferrableTab = tabMessageQueueMap.get(preferableTabId);
+  messageQueueForPreferrableTab = !isSet(messageQueueForPreferrableTab)
+    ? new Set([messageObj])
+    : messageQueueForPreferrableTab.add(messageObj);
+  tabMessageQueueMap.set(preferableTabId, messageQueueForPreferrableTab);
 
+  console.log(
+    `Fetching required tab and sending message to it : `,
+    preferableTabId
+  );
   // eslint-disable-next-line no-undef
-  chrome.tabs.get(preferableTabId, preferableTab => {
-    const messagesToSend = [...messageQueue];
-
-    if (preferableTab) {
-      // eslint-disable-next-line no-undef
-      chrome.tabs.sendMessage(
-        preferableTab.id,
-        messagesToSend,
-        {},
-        responseCallback
-      );
+  chrome.tabs.get(preferableTabId, activeTab => {
+    if (activeTab) {
+      const messageQueueForActiveTab = tabMessageQueueMap.get(activeTab.id);
+      if (messageQueueForActiveTab) {
+        const messagesToSend = [...messageQueueForActiveTab];
+        console.log(
+          `Found required tab ${activeTab.id}...sending message to it : `,
+          messagesToSend
+        );
+        // eslint-disable-next-line no-undef
+        chrome.tabs.sendMessage(
+          activeTab.id,
+          messagesToSend,
+          {},
+          responseCallback
+        );
+      }
+      tabMessageQueueMap.delete(activeTab.id);
     }
-    messageQueue.clear();
   });
 }
 
-/**
- * Utils
- */
+export function sendMessageToTabWithId(tabId, messageObj, responseCallback) {
+  // eslint-disable-next-line no-undef
+  chrome.tabs.get(tabId, activeTab => {
+    if (activeTab) {
+      messageObj.data.url = activeTab.url;
+      // eslint-disable-next-line no-undef
+      chrome.tabs.sendMessage(activeTab.id, messageObj, {}, responseCallback);
+    }
+  });
+}
 
-export function validateArguments(receiverOrSenderModule, message, data) {
+/** ************************************************
+ *        Internal Functionality
+ ************************************************* */
+
+export function validateArguments(
+  receiverOrSenderModule,
+  message,
+  data,
+  receiverModuleOptions
+) {
   let areArgumentsValid = true;
 
-  if (
-    receiverOrSenderModule &&
-    !EXTENSION_MODULES[receiverOrSenderModule] &&
-    !isNumber(receiverOrSenderModule)
-  ) {
+  if (receiverOrSenderModule && !EXTENSION_MODULES[receiverOrSenderModule]) {
     areArgumentsValid = false;
     throw new Error(
       `Please enter a valid Receiver/Sender Module : ${receiverOrSenderModule}. Valid Extension Modules : `,
@@ -228,6 +279,16 @@ export function validateArguments(receiverOrSenderModule, message, data) {
     throw new Error(`Required : Message Param missing`);
   }
 
+  if (
+    receiverModuleOptions &&
+    (!isFunction(receiverModuleOptions) || !isObject(receiverModuleOptions))
+  ) {
+    areArgumentsValid = false;
+    throw new Error(
+      `Receiver Module Options should either be a function or object to filter active tabs`
+    );
+  }
+
   return areArgumentsValid;
 }
 
@@ -236,24 +297,42 @@ function extractSendMessageArgs(args) {
   let message;
   let data;
   let responseCallback;
+  let receiverModuleOptions;
 
   /* eslint-disable prefer-destructuring */
 
-  if ((isString(args[0]) || isNumber(args[0])) && isString(args[1])) {
+  if (isString(args[0]) && (isString(args[1]) || isString(args[2]))) {
     receiverModule = args[0];
-    message = args[1];
 
-    if (isObject(args[2])) {
-      data = args[2];
+    if (isObject(args[1]) || isFunction(args[1])) {
+      receiverModuleOptions = args[1];
+      message = args[2];
 
-      if (isFunction(args[3])) {
+      if (isObject(args[3])) {
+        data = args[3];
+
+        if (isFunction(args[4])) {
+          responseCallback = args[4];
+        }
+      } else if (isFunction(args[3])) {
         responseCallback = args[3];
       }
-    } else if (isFunction(args[2])) {
-      responseCallback = args[2];
+    } else if (isString(args[1])) {
+      message = args[1];
+
+      if (isObject(args[2])) {
+        data = args[2];
+
+        if (isFunction(args[3])) {
+          responseCallback = args[3];
+        }
+      } else if (isFunction(args[2])) {
+        responseCallback = args[2];
+      }
     }
   } else if (isString(args[0])) {
     message = args[0];
+
     if (isObject(args[1])) {
       data = args[1];
 
@@ -271,6 +350,7 @@ function extractSendMessageArgs(args) {
     message,
     data,
     responseCallback,
+    receiverModuleOptions,
   };
 }
 
@@ -348,12 +428,16 @@ async function setCurrentExtensionModule() {
   } else if (!chrome || !chrome.runtime || !chrome.runtime.onMessage) {
     currentExtensionModule = EXTENSION_MODULES.INJECTED_SCRIPT;
   } else {
-    currentExtensionModule = EXTENSION_MODULES.CONTENT_SCRIPT;
+    currentExtensionModule = EXTENSION_MODULES.TAB;
   }
 
   console.log(`Current Extensions Module is : `, currentExtensionModule);
   /* eslint-enable no-undef */
 }
+
+/** ***************************************************
+ *                 UTILS
+ *************************************************** */
 
 /**
  * Get popup file name in case its set dynamically using set popup
@@ -363,6 +447,40 @@ async function getPopupFileName() {
     // eslint-disable-next-line no-undef
     chrome.browserAction.getPopup({}, (popupFileName = '') => {
       resolve(popupFileName);
+    });
+  });
+}
+
+async function filterTabs(receiverModuleOptions) {
+  let filteredTabs;
+
+  return new Promise(resolve => {
+    // eslint-disable-next-line no-undef
+    chrome.tabs.query({}, tabs => {
+      if (!isEmpty(receiverModuleOptions)) {
+        if (isFunction(receiverModuleOptions)) {
+          filteredTabs = receiverModuleOptions(tabs);
+        } else if (isObject(receiverModuleOptions)) {
+          filteredTabs = tabs.filter(tab =>
+            isMatch(tab, receiverModuleOptions)
+          );
+        }
+
+        if (
+          isArray(filteredTabs) &&
+          filteredTabs.every(filteredTab => isNumber(filteredTab.id))
+        ) {
+          resolve(filteredTabs);
+        } else {
+          console.log(
+            `Warn : No tabs were found using the given tab options or incorrect data was returned by filter function `,
+            receiverModuleOptions
+          );
+          resolve();
+        }
+      } else {
+        resolve(tabs);
+      }
     });
   });
 }
