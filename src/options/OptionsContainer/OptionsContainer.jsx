@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import "./Options.scss";
 import Styles from "./OptionsContainer.module.scss";
 
 export default function OptionsContainer() {

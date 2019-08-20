@@ -17,6 +17,7 @@ module.exports = {
     jest: true
   },
   rules: {
+    "no-case-declarations" : 0,
     "import/no-unresolved" : 0,
     "no-restricted-globals" : 0,
     "prefer-rest-params" : 0,

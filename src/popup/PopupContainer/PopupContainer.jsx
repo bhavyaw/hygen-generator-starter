@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import "./Popup.scss";
 import Styles from "./PopupContainer.module.scss";
 
 export default function PopupContainer() {

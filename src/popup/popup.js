@@ -1,34 +1,21 @@
+import { APP_CONSTANTS } from '../appConstants';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { showDesktopNotification } from 'common/utils';
 import PopupContainer from './PopupContainer/PopupContainer';
-import { EXTENSION_MODULES, subscribe } from '../common/crxMessenger';
+import {showDesktopNotification} from 'common/utils';
+import "./Popup.scss";
 
-console.log('inside popup script', EXTENSION_MODULES);
+console.log("inside popup script");
 startPopUpScript();
 
 function startPopUpScript() {
   initialize();
   // inter exchange message handler
-  showDesktopNotification('Popup Started');
+  showDesktopNotification("Popup Started");
 }
 
 function initialize() {
   renderPopupComponent();
-  subscribe('GOOGLE_OPEN', (data, sendResponseCallback) => {
-    console.log(
-      'Inside options.js subscriber for message GOOGLE_OPEN',
-      data,
-      sendResponseCallback
-    );
-    setTimeout(() => {
-      sendResponseCallback({
-        fromPopup: true,
-        pingback: true,
-        data,
-      });
-    }, 200);
-  });
 }
 
 function renderPopupComponent() {

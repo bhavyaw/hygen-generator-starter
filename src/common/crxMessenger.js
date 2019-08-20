@@ -12,20 +12,16 @@ import isUndefined from 'lodash/isUndefined';
 
 export const EXTENSION_MODULES = {
   BACKGROUND: 'BACKGROUND',
-  background: 'BACKGROUND',
   POPUP: 'POPUP',
-  popup: 'POPUP',
   OPTIONS: 'OPTIONS',
-  options: 'OPTIONS',
   TAB: 'TAB',
-  tab: 'tab',
-  INJECTED_SCRIPT: 'INJECTED_SCRIPT',
-  injected_script: 'INJECTED_SCRIPT',
+  VARIABLE_ACCESS_SCRIPT: 'VARIABLE_ACCESS_SCRIPT',
+  OPTIONS_EMBEDDED: 'OPTIONS_EMBEDDED', // TODO : enhancements
 };
 
 // To take care of the missing messages
 const messageSubscriptionMap = new Map();
-const messageSenderLinkMap = new Map();
+const receiveMessagesFromMap = new Map();
 const tabMessageQueueMap = new Map();
 let currentExtensionModule = null;
 let messageReceiverInitialized = false;
@@ -66,11 +62,11 @@ export function subscribe() {
     messageSubscriptionMap.set(message, newMessageListeners);
 
     if (senderModule) {
-      const messageSendersList = messageSenderLinkMap.get(message);
+      const messageSendersList = receiveMessagesFromMap.get(message);
       const newMessageSendersList = messageSendersList
         ? uniq([...messageSendersList, senderModule])
         : [senderModule];
-      messageSenderLinkMap.set(message, newMessageSendersList);
+      receiveMessagesFromMap.set(message, newMessageSendersList);
     }
   }
 }
@@ -85,14 +81,14 @@ function onMessageHandler(messageObj, senderObj, sendResponseCallback) {
   }
 
   const { receiver, data, sender, message } = messageObj;
-  const messageRestrictedSenders = messageSenderLinkMap.get(message);
+  const messageRestrictedSenders = receiveMessagesFromMap.get(message);
 
   if (
     !messageRestrictedSenders ||
     (messageRestrictedSenders && messageRestrictedSenders.indexOf(sender) > -1)
   ) {
     if (!receiver || (receiver && receiver === currentExtensionModule)) {
-      dispatchMessagesToReceivers(
+      dispatchMessagesToListeners(
         message,
         data,
         sendResponseCallback,
@@ -104,7 +100,7 @@ function onMessageHandler(messageObj, senderObj, sendResponseCallback) {
   return true;
 }
 
-function dispatchMessagesToReceivers(
+function dispatchMessagesToListeners(
   message,
   data,
   sendResponseCallback,
@@ -188,6 +184,8 @@ export async function publish() {
         }
       }
       break;
+
+    case receiverModule === EXTENSION_MODULES.
 
     default:
       chrome.runtime.sendMessage(messageObj, responseCallback); // eslint-disable-line no-undef
@@ -303,6 +301,7 @@ function extractSendMessageArgs(args) {
 
   if (isString(args[0]) && (isString(args[1]) || isString(args[2]))) {
     receiverModule = args[0];
+    receiverModule = receiverModule.toUpperCase();
 
     if (isObject(args[1]) || isFunction(args[1])) {
       receiverModuleOptions = args[1];
@@ -362,6 +361,7 @@ function extractSubscribeMessageArguments(args) {
   /* eslint-disable prefer-destructuring */
   if (isString(args[0]) && isString(args[1])) {
     senderModule = args[0];
+    senderModule = senderModule.toUpperCase();
     message = args[1];
 
     if (isFunction(args[2])) {
@@ -484,3 +484,4 @@ async function filterTabs(receiverModuleOptions) {
     });
   });
 }
+
