@@ -1,6 +1,8 @@
 import isString from 'lodash/isString';
 import isEmpty from 'lodash/isEmpty';
 import isArray from 'lodash/isArray';
+import isFunction from 'lodash/isFunction';
+import isObject from 'lodash/isObject';
 import { EXTENSION_MODULES, getCurrentExtensionModule } from './crxMessenger';
 
 export default class WindowsMessenger {
@@ -32,7 +34,9 @@ export default class WindowsMessenger {
   }
 
   subscribe(message, responseCallback) {
-    if (this.validateMessagingArguments(message)) {
+    if (
+      this.validateMessagingArguments(message, responseCallback, 'subscribe')
+    ) {
       const messageListeners = this.messageSubscriptionMap.get(message);
       const newMessageListeners = messageListeners
         ? [...messageListeners, responseCallback]
@@ -50,7 +54,7 @@ export default class WindowsMessenger {
       throw new Error(`Variable Script is not loaded yet..`);
     }
 
-    if (this.validateMessagingArguments(message)) {
+    if (this.validateMessagingArguments(message, data, 'publish')) {
       const messageObj = {};
       messageObj.message = message;
       if (data) {
@@ -91,6 +95,14 @@ export default class WindowsMessenger {
 
   // For content script only
   async injectVariableAccessScript(variableAccessScriptPath) {
+    if (
+      this.currentExtensionModule === EXTENSION_MODULES.VARIABLE_ACCESS_SCRIPT
+    ) {
+      throw new Error(
+        `Cannot inject script from variable access script. Supposed to be called from content script`
+      );
+    }
+
     if (!variableAccessScriptPath || !isString(variableAccessScriptPath)) {
       throw new Error(`Please enter a valid variableAccess Script Path`);
     }
@@ -125,10 +137,24 @@ export default class WindowsMessenger {
 
   // Utils
 
-  validateMessagingArguments(message) {
+  validateMessagingArguments(firstArgument, secondArgument, validationCase) {
     let argumentsValid = true;
 
-    if (isEmpty(message)) {
+    if (validationCase === 'subscribe') {
+      if (secondArgument && !isFunction(secondArgument)) {
+        throw new Error(
+          `Second Argument to subscribe function should be a function`
+        );
+      }
+    } else if (validationCase === 'publish') {
+      if (secondArgument && !isObject(secondArgument)) {
+        throw new Error(
+          `Second Argument to publish function should be an Object`
+        );
+      }
+    }
+
+    if (isEmpty(firstArgument)) {
       argumentsValid = false;
       throw new Error(`Required : Message Param missing`);
     }

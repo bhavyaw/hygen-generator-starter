@@ -24,6 +24,9 @@ async function extractPageDetails() {
     await windowsMessenger.injectVariableAccessScript(
       'js/variableAccessScript.js'
     );
+    windowsMessenger.subscribe('RETURN_MESSAGE', data => {
+      console.log(`Inside contentScript1 : `, data);
+    });
   } catch (e) {
     console.log(`Some error occured in loading variable access script : `, e);
   }

@@ -18,5 +18,10 @@ function initSubscribers() {
       `variableAccesscript.js : TEST_MESSAGE subscriber fired..`,
       data
     );
+    setTimeout(() => {
+      messenger.sendMessage('RETURN_MESSAGE', {
+        pingback: true,
+      });
+    }, 2000);
   });
 }
