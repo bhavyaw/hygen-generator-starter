@@ -32,7 +32,7 @@ initialize();
  */
 function initialize() {
   console.log('Initializing CRX Messenger');
-  setCurrentExtensionModule();
+  currentExtensionModule = getCurrentExtensionModule();
 }
 
 // add check for content script and background - to use custom function to send and receive messages
@@ -185,7 +185,11 @@ export async function publish() {
       }
       break;
 
-    case receiverModule === EXTENSION_MODULES.
+    case (receiverModule === EXTENSION_MODULES.VARIABLE_ACCESS_SCRIPT &&
+      senderModule === EXTENSION_MODULES.TAB) ||
+      (receiverModule === EXTENSION_MODULES.TAB &&
+        senderModule === EXTENSION_MODULES.VARIABLE_ACCESS_SCRIPT):
+      throw new Error(`Use Windows messenger utility for this purpose`);
 
     default:
       chrome.runtime.sendMessage(messageObj, responseCallback); // eslint-disable-line no-undef
@@ -194,7 +198,7 @@ export async function publish() {
 }
 
 /** *
- * Extended Api's
+ * Extended Api
  */
 
 export function sendMessageFromBackgroundToActiveTab(
@@ -382,12 +386,13 @@ function extractSubscribeMessageArguments(args) {
   };
 }
 
-async function setCurrentExtensionModule() {
+export async function getCurrentExtensionModule() {
   const manifest = chrome.runtime.getManifest(); // eslint-disable-line no-undef
   const pageWindowLocation = window.location.href;
 
   let popupPageFileName = get(manifest, 'browser_action.default_popup', '');
   let optionsPageFileName = get(manifest, 'options_page', '');
+  let extensionModule = null;
 
   // console.log(
   //   'Inside setCurrentExtensionModule() : ',
@@ -395,16 +400,6 @@ async function setCurrentExtensionModule() {
   //   popupPageFileName,
   //   optionsPageFileName
   // );
-  if (isEmpty(popupPageFileName)) {
-    popupPageFileName = await getPopupFileName();
-  }
-
-  if (isEmpty(optionsPageFileName)) {
-    optionsPageFileName = get(manifest, 'options_ui.page', '');
-  }
-
-  popupPageFileName = popupPageFileName.split('/').pop();
-  optionsPageFileName = optionsPageFileName.split('/').pop();
 
   /* eslint-disable no-undef */
   if (
@@ -413,25 +408,37 @@ async function setCurrentExtensionModule() {
     chrome.extension.getBackgroundPage &&
     chrome.extension.getBackgroundPage() === window
   ) {
-    currentExtensionModule = EXTENSION_MODULES.BACKGROUND;
+    extensionModule = EXTENSION_MODULES.BACKGROUND;
   } else if (
     chrome &&
     chrome.extension &&
     chrome.extension.getBackgroundPage &&
     chrome.extension.getBackgroundPage() !== window
   ) {
+    if (isEmpty(popupPageFileName)) {
+      popupPageFileName = await getPopupFileName();
+    }
+
+    if (isEmpty(optionsPageFileName)) {
+      optionsPageFileName = get(manifest, 'options_ui.page', '');
+    }
+
+    popupPageFileName = popupPageFileName.split('/').pop();
+    optionsPageFileName = optionsPageFileName.split('/').pop();
+
     if (pageWindowLocation.includes(popupPageFileName)) {
-      currentExtensionModule = EXTENSION_MODULES.POPUP;
+      extensionModule = EXTENSION_MODULES.POPUP;
     } else if (pageWindowLocation.includes(optionsPageFileName)) {
-      currentExtensionModule = EXTENSION_MODULES.OPTIONS;
+      extensionModule = EXTENSION_MODULES.OPTIONS;
     }
   } else if (!chrome || !chrome.runtime || !chrome.runtime.onMessage) {
-    currentExtensionModule = EXTENSION_MODULES.INJECTED_SCRIPT;
+    extensionModule = EXTENSION_MODULES.INJECTED_SCRIPT;
   } else {
-    currentExtensionModule = EXTENSION_MODULES.TAB;
+    extensionModule = EXTENSION_MODULES.TAB;
   }
 
-  console.log(`Current Extensions Module is : `, currentExtensionModule);
+  console.log(`Current Extensions Module is : `, extensionModule);
+  return extensionModule;
   /* eslint-enable no-undef */
 }
 
@@ -484,4 +491,3 @@ async function filterTabs(receiverModuleOptions) {
     });
   });
 }
-

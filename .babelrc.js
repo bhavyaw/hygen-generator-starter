@@ -30,7 +30,8 @@ module.exports = {
         }],
         "@babel/plugin-transform-runtime",
         "babel-plugin-lodash",
-        "babel-plugin-syntax-dynamic-import"
+        "babel-plugin-syntax-dynamic-import",
+        "@babel/plugin-proposal-class-properties"
     ],
     env: {
         "production": {

@@ -1,17 +1,17 @@
-import { APP_CONSTANTS } from '../appConstants';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import { showDesktopNotification } from 'common/utils';
 import PopupContainer from './PopupContainer/PopupContainer';
-import {showDesktopNotification} from 'common/utils';
-import "./Popup.scss";
+import { APP_CONSTANTS } from '../appConstants';
+import './Popup.scss';
 
-console.log("inside popup script");
+console.log('inside popup script', chrome); // eslint-disable-line no=undef
 startPopUpScript();
 
 function startPopUpScript() {
   initialize();
   // inter exchange message handler
-  showDesktopNotification("Popup Started");
+  showDesktopNotification('Popup Started');
 }
 
 function initialize() {

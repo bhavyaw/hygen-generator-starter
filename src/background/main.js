@@ -3,7 +3,7 @@ import { subscribe } from '../common/crxMessenger';
 // import { APP_CONSTANTS } from '../appConstants';
 // import { APP_MESSAGES } from '../appMessages';
 
-console.log(`Inside background scripts...`);
+console.log(`Inside background scripts...`, chrome); // eslint-disable-line no-undef
 initializeBackgroundScript();
 
 async function initializeBackgroundScript() {
