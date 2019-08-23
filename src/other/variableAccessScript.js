@@ -1,4 +1,4 @@
-import WindowMessenger from 'common/windowsMessenger';
+import WindowMessenger from 'common/messenger/windowsMessenger';
 
 let messenger = null;
 

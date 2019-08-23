@@ -1,6 +1,6 @@
+import WindowsMessenger from 'common/messenger/windowsMessenger';
 import { APP_CONSTANTS } from '../appConstants';
 import { APP_MESSAGES } from '../appMessages';
-import WindowsMessenger from '../common/windowsMessenger';
 
 console.log(`Inside content Script file - contentScript1.js`);
 startContentScript();

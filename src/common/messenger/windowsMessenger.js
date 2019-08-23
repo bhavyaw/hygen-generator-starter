@@ -3,7 +3,7 @@ import isEmpty from 'lodash/isEmpty';
 import isArray from 'lodash/isArray';
 import isFunction from 'lodash/isFunction';
 import isObject from 'lodash/isObject';
-import { EXTENSION_MODULES, getCurrentExtensionModule } from './crxMessenger';
+import { EXTENSION_MODULES, getCurrentExtensionModule } from './utils';
 
 export default class WindowsMessenger {
   variableScriptListeners = [];

@@ -6,18 +6,9 @@ import isFunction from 'lodash/isFunction';
 import isArray from 'lodash/isArray';
 import isMatch from 'lodash/isMatch';
 import isSet from 'lodash/isSet';
-import get from 'lodash/get';
 import uniq from 'lodash/uniq';
 import isUndefined from 'lodash/isUndefined';
-
-export const EXTENSION_MODULES = {
-  BACKGROUND: 'BACKGROUND',
-  POPUP: 'POPUP',
-  OPTIONS: 'OPTIONS',
-  TAB: 'TAB',
-  VARIABLE_ACCESS_SCRIPT: 'VARIABLE_ACCESS_SCRIPT',
-  OPTIONS_EMBEDDED: 'OPTIONS_EMBEDDED', // TODO : enhancements
-};
+import { getCurrentExtensionModule, EXTENSION_MODULES } from './utils';
 
 // To take care of the missing messages
 const messageSubscriptionMap = new Map();
@@ -68,50 +59,6 @@ export function subscribe() {
         : [senderModule];
       receiveMessagesFromMap.set(message, newMessageSendersList);
     }
-  }
-}
-
-function onMessageHandler(messageObj, senderObj, sendResponseCallback) {
-  if (isArray(messageObj)) {
-    messageObj.forEach(singleMessageObj =>
-      onMessageHandler(singleMessageObj, senderObj, sendResponseCallback)
-    );
-
-    return true;
-  }
-
-  const { receiver, data, sender, message } = messageObj;
-  const messageRestrictedSenders = receiveMessagesFromMap.get(message);
-
-  if (
-    !messageRestrictedSenders ||
-    (messageRestrictedSenders && messageRestrictedSenders.indexOf(sender) > -1)
-  ) {
-    if (!receiver || (receiver && receiver === currentExtensionModule)) {
-      dispatchMessagesToListeners(
-        message,
-        data,
-        sendResponseCallback,
-        senderObj
-      );
-    }
-  }
-
-  return true;
-}
-
-function dispatchMessagesToListeners(
-  message,
-  data,
-  sendResponseCallback,
-  senderObj
-) {
-  const messageListeners = messageSubscriptionMap.get(message);
-
-  if (isArray(messageListeners) && !isEmpty(messageListeners)) {
-    messageListeners.forEach(messageListener => {
-      messageListener(data, sendResponseCallback, senderObj);
-    });
   }
 }
 
@@ -260,6 +207,54 @@ export function sendMessageToTabWithId(tabId, messageObj, responseCallback) {
  *        Internal Functionality
  ************************************************* */
 
+function onMessageHandler(messageObj, senderObj, sendResponseCallback) {
+  if (isArray(messageObj)) {
+    messageObj.forEach(singleMessageObj =>
+      onMessageHandler(singleMessageObj, senderObj, sendResponseCallback)
+    );
+
+    return true;
+  }
+
+  const { receiver, data, sender, message } = messageObj;
+  const messageRestrictedSenders = receiveMessagesFromMap.get(message);
+
+  if (
+    !messageRestrictedSenders ||
+    (messageRestrictedSenders && messageRestrictedSenders.indexOf(sender) > -1)
+  ) {
+    if (!receiver || (receiver && receiver === currentExtensionModule)) {
+      dispatchMessagesToListeners(
+        message,
+        data,
+        sendResponseCallback,
+        senderObj
+      );
+    }
+  }
+
+  return true;
+}
+
+function dispatchMessagesToListeners(
+  message,
+  data,
+  sendResponseCallback,
+  senderObj
+) {
+  const messageListeners = messageSubscriptionMap.get(message);
+
+  if (isArray(messageListeners) && !isEmpty(messageListeners)) {
+    messageListeners.forEach(messageListener => {
+      messageListener(data, sendResponseCallback, senderObj);
+    });
+  }
+}
+
+/** ************************************************
+ *            Utils
+ ************************************************* */
+
 export function validateArguments(
   receiverOrSenderModule,
   message,
@@ -384,78 +379,6 @@ function extractSubscribeMessageArguments(args) {
     message,
     responseCallback,
   };
-}
-
-export async function getCurrentExtensionModule() {
-  const manifest = chrome.runtime.getManifest(); // eslint-disable-line no-undef
-  const pageWindowLocation = window.location.href;
-
-  let popupPageFileName = get(manifest, 'browser_action.default_popup', '');
-  let optionsPageFileName = get(manifest, 'options_page', '');
-  let extensionModule = null;
-
-  // console.log(
-  //   'Inside setCurrentExtensionModule() : ',
-  //   manifest,
-  //   popupPageFileName,
-  //   optionsPageFileName
-  // );
-
-  /* eslint-disable no-undef */
-  if (
-    chrome &&
-    chrome.extension &&
-    chrome.extension.getBackgroundPage &&
-    chrome.extension.getBackgroundPage() === window
-  ) {
-    extensionModule = EXTENSION_MODULES.BACKGROUND;
-  } else if (
-    chrome &&
-    chrome.extension &&
-    chrome.extension.getBackgroundPage &&
-    chrome.extension.getBackgroundPage() !== window
-  ) {
-    if (isEmpty(popupPageFileName)) {
-      popupPageFileName = await getPopupFileName();
-    }
-
-    if (isEmpty(optionsPageFileName)) {
-      optionsPageFileName = get(manifest, 'options_ui.page', '');
-    }
-
-    popupPageFileName = popupPageFileName.split('/').pop();
-    optionsPageFileName = optionsPageFileName.split('/').pop();
-
-    if (pageWindowLocation.includes(popupPageFileName)) {
-      extensionModule = EXTENSION_MODULES.POPUP;
-    } else if (pageWindowLocation.includes(optionsPageFileName)) {
-      extensionModule = EXTENSION_MODULES.OPTIONS;
-    }
-  } else if (!chrome || !chrome.runtime || !chrome.runtime.onMessage) {
-    extensionModule = EXTENSION_MODULES.INJECTED_SCRIPT;
-  } else {
-    extensionModule = EXTENSION_MODULES.TAB;
-  }
-
-  console.log(`Current Extensions Module is : `, extensionModule);
-  return extensionModule;
-  /* eslint-enable no-undef */
-}
-
-/** ***************************************************
- *                 UTILS
- *************************************************** */
-
-/**
- * Get popup file name in case its set dynamically using set popup
- */
-async function getPopupFileName() {
-  return new Promise(resolve => {
-    // eslint-disable-next-line no-undef
-    chrome.browserAction.getPopup({}, (popupFileName = '') => {
-      resolve(popupFileName);
-    });
-  });
 }
 
 async function filterTabs(receiverModuleOptions) {
