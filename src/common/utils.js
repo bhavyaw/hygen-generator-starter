@@ -16,11 +16,11 @@ export function showDesktopNotification(
   type = 'basic',
   iconUrl = '../icon48.png'
 ) {
+  // eslint-disable-next-line no-undef
   chrome.notifications.create({
     message,
     type,
     title,
-    iconUrl
+    iconUrl,
   });
 }
-

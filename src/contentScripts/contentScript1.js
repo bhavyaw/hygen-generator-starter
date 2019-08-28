@@ -13,11 +13,11 @@ function startContentScript() {
 
 function windowOnloadHandler() {
   console.log(`Page associated with contentScript1 loaded`);
-  extractPageDetails();
   insertTestButton();
+  extractPageInfo();
 }
 
-async function extractPageDetails() {
+async function extractPageInfo() {
   windowsMessenger = new WindowsMessenger(window, document.head);
 
   try {

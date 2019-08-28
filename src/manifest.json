@@ -13,12 +13,10 @@
         "128": "./assets/icon128.png"
     },
     "content_security_policy": "script-src 'self'; object-src 'self'",
-    
     "options_ui": {
         "page": "options.html",
         "open_in_tab": false
     },
-    
     "content_scripts": [
         {
             "matches": [
@@ -34,8 +32,8 @@
         "persistent": false
     },
     "web_accessible_resources": [
-        "js/variableAccessScript.js"
-    ], 
+        "js/webAccessScript.js"
+    ],
     "permissions": [
         "tabs",
         "storage",

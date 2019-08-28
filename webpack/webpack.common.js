@@ -20,7 +20,7 @@ const mainChunks = pick(originalEntriesHash, [
   'appGlobals',
   'appMessages',
   'appConstants',
-  'variableAccessScript',
+  'webAccessScript',
   // other files - add manually
 ]);
 

@@ -5,7 +5,7 @@ import PopupContainer from './PopupContainer/PopupContainer';
 import { APP_CONSTANTS } from '../appConstants';
 import './Popup.scss';
 
-console.log('inside popup script', chrome); // eslint-disable-line no=undef
+console.log('inside popup script', chrome); // eslint-disable-line no-undef
 startPopUpScript();
 
 function startPopUpScript() {
