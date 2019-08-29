@@ -1,9 +1,9 @@
 import { showDesktopNotification } from 'common/utils';
-import { subscribe } from 'common/messenger/crxMessenger';
+import { subscribe } from '../common/messenger/crxMessenger';
 // import { APP_CONSTANTS } from '../appConstants';
 // import { APP_MESSAGES } from '../appMessages';
 
-console.log(`Inside background scripts...`, chrome); // eslint-disable-line no-undef
+console.log(`Inside background scripts...`);
 initializeBackgroundScript();
 
 async function initializeBackgroundScript() {

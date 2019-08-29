@@ -13,10 +13,7 @@
         "128": "./assets/icon128.png"
     },
     "content_security_policy": "script-src 'self'; object-src 'self'",
-    "options_ui": {
-        "page": "options.html",
-        "open_in_tab": false
-    },
+    "options_page": "options.html",
     "content_scripts": [
         {
             "matches": [

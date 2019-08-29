@@ -1,10 +1,10 @@
+import { APP_CONSTANTS } from '../appConstants';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { APP_CONSTANTS } from '../appConstants';
 import OptionsContainer from './OptionsContainer/OptionsContainer';
-import './Options.scss';
+import "./Options.scss";
 
-console.log('inside options script!', chrome); // eslint-disable-line no-undef
+console.log('inside options script!');
 startPopUpScript();
 
 function startPopUpScript() {

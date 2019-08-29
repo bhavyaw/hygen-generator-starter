@@ -21,9 +21,7 @@ async function extractPageInfo() {
   windowsMessenger = new WindowsMessenger(window, document.head);
 
   try {
-    await windowsMessenger.injectVariableAccessScript(
-      'js/variableAccessScript.js'
-    );
+    await windowsMessenger.injectWebAccessScript('js/webAccessScript.js');
     windowsMessenger.subscribe('RETURN_MESSAGE', data => {
       console.log(`Inside contentScript1 : `, data);
     });
